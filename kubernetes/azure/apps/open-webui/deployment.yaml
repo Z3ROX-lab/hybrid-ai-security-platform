@@ -1,0 +1,130 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: open-webui-config
+  namespace: ai-apps
+data:
+  # OpenWebUI Configuration
+  WEBUI_NAME: "AI Platform (Azure)"
+  ENABLE_SIGNUP: "false"
+  DEFAULT_MODELS: "mistral:latest"
+  
+  # Connect to on-prem Ollama via Tailscale
+  # Update this with your Tailscale IP
+  OLLAMA_BASE_URL: "http://100.x.x.x:11434"
+  
+  # PostgreSQL - will be overridden by secret
+  DATABASE_URL: "placeholder"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: open-webui-secrets
+  namespace: ai-apps
+  annotations:
+    # If using Azure Key Vault CSI driver, reference the secret here
+    # secrets-store.csi.k8s.io/secret-provider-class: azure-keyvault
+type: Opaque
+stringData:
+  # This will be populated from Key Vault or manually
+  # Format: postgresql://user:password@host:5432/database?sslmode=require
+  DATABASE_URL: "postgresql://pgadmin:CHANGE_ME@psql-ai-platform-SUFFIX.postgres.database.azure.com:5432/openwebui?sslmode=require"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: open-webui
+  namespace: ai-apps
+  labels:
+    app: open-webui
+    app.kubernetes.io/name: open-webui
+    app.kubernetes.io/part-of: hybrid-ai-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: open-webui
+  template:
+    metadata:
+      labels:
+        app: open-webui
+    spec:
+      containers:
+        - name: open-webui
+          image: ghcr.io/open-webui/open-webui:main
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - configMapRef:
+                name: open-webui-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: open-webui-secrets
+                  key: DATABASE_URL
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /app/backend/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: open-webui
+  namespace: ai-apps
+  labels:
+    app: open-webui
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app: open-webui
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: open-webui
+  namespace: ai-apps
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    # Enable if using cert-manager
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  rules:
+    - host: chat.ai-platform.azure.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: open-webui
+                port:
+                  number: 80

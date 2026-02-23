@@ -1,0 +1,90 @@
+# =============================================================================
+# TERRAFORM VARIABLES EXAMPLE
+# =============================================================================
+# Copy this file to terraform.tfvars and customize for your environment
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# GENERAL
+# -----------------------------------------------------------------------------
+
+project_name = "ai-platform"
+environment  = "dev"
+location     = "francecentral"
+
+tags = {
+  project     = "hybrid-ai-security-platform"
+  environment = "dev"
+  managed_by  = "terraform"
+  owner       = "your-name"
+}
+
+# -----------------------------------------------------------------------------
+# NETWORKING
+# -----------------------------------------------------------------------------
+
+vnet_address_space      = ["10.0.0.0/16"]
+subnet_aks_prefix       = "10.0.1.0/24"
+subnet_data_prefix      = "10.0.2.0/24"
+subnet_endpoints_prefix = "10.0.3.0/24"
+
+# -----------------------------------------------------------------------------
+# AKS
+# -----------------------------------------------------------------------------
+
+aks_kubernetes_version = "1.29"
+aks_sku_tier           = "Free"  # Use "Standard" for SLA in production
+
+# VM Size options (sorted by cost):
+# - Standard_B2s   : 2 vCPU, 4GB  RAM, ~$30/month  (cheapest, good for dev)
+# - Standard_B2ms  : 2 vCPU, 8GB  RAM, ~$60/month
+# - Standard_D2s_v3: 2 vCPU, 8GB  RAM, ~$70/month  (better performance)
+# - Standard_D4s_v3: 4 vCPU, 16GB RAM, ~$140/month (for heavier workloads)
+aks_default_node_pool_vm_size = "Standard_B2s"
+
+aks_default_node_pool_count = 1
+aks_enable_autoscaling      = false  # Enable for production
+
+# If autoscaling is enabled:
+# aks_default_node_pool_min_count = 1
+# aks_default_node_pool_max_count = 3
+
+# -----------------------------------------------------------------------------
+# POSTGRESQL
+# -----------------------------------------------------------------------------
+
+postgresql_version = "15"
+
+# SKU options (sorted by cost):
+# - B_Standard_B1ms : 1 vCPU, 2GB  RAM, ~$15/month  (minimum, good for dev)
+# - B_Standard_B2s  : 2 vCPU, 4GB  RAM, ~$30/month
+# - GP_Standard_D2s_v3: 2 vCPU, 8GB RAM, ~$100/month (production)
+postgresql_sku_name = "B_Standard_B1ms"
+
+postgresql_storage_mb    = 32768  # 32GB minimum
+postgresql_admin_username = "pgadmin"
+
+postgresql_databases = [
+  "langfuse",
+  "openwebui"
+]
+
+# -----------------------------------------------------------------------------
+# KEY VAULT
+# -----------------------------------------------------------------------------
+
+keyvault_sku_name                   = "standard"
+keyvault_soft_delete_retention_days = 7  # Minimum, use 90 in production
+
+# -----------------------------------------------------------------------------
+# MONITORING
+# -----------------------------------------------------------------------------
+
+log_analytics_retention_days = 30
+enable_container_insights    = true
+
+# -----------------------------------------------------------------------------
+# AZURE ARC
+# -----------------------------------------------------------------------------
+
+arc_cluster_name = "k3d-ai-platform"

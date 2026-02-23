@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-apps
+  labels:
+    app.kubernetes.io/part-of: hybrid-ai-platform
+    environment: azure
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  labels:
+    app.kubernetes.io/part-of: hybrid-ai-platform
+    environment: azure
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    app.kubernetes.io/part-of: hybrid-ai-platform
+    environment: azure
