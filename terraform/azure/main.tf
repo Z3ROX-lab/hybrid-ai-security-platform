@@ -152,7 +152,7 @@ resource "azurerm_kubernetes_cluster" "main" {
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   dns_prefix          = var.project_name
-  kubernetes_version  = var.aks_kubernetes_version
+  #kubernetes_version  = var.aks_kubernetes_version
 
   # Free tier control plane
   sku_tier = var.aks_sku_tier
@@ -244,6 +244,8 @@ resource "azurerm_postgresql_flexible_server" "main" {
   storage_mb            = var.postgresql_storage_mb
   sku_name              = var.postgresql_sku_name
   backup_retention_days = 7
+
+  public_network_access_enabled = false
 
   # Disable HA for cost savings in dev
   # high_availability {
