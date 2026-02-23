@@ -78,7 +78,7 @@ variable "aks_sku_tier" {
 variable "aks_default_node_pool_vm_size" {
   description = "VM size for default node pool"
   type        = string
-  default     = "Standard_B2s" # Économique: 2 vCPU, 4GB RAM, ~$30/month
+  default     = "Standard_B2s_v2" # Économique: 2 vCPU, 4GB RAM, ~$30/month
 }
 
 variable "aks_default_node_pool_count" {
