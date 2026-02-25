@@ -13,6 +13,7 @@ spec:
       labels:
         app: tailscale-proxy
     spec:
+      serviceAccountName: tailscale-proxy
       containers:
       - name: tailscale
         image: tailscale/tailscale:latest
@@ -28,6 +29,8 @@ spec:
           value: "/var/lib/tailscale"
         - name: TS_HOSTNAME
           value: "aks-proxy"
+        - name: TS_KUBE_SECRET
+          value: "tailscale-state"
         securityContext:
           runAsUser: 1000
           runAsGroup: 1000
