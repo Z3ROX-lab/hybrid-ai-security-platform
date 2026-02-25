@@ -22,3 +22,10 @@ postgresql:
     database: "langfuse"
     username: "pgadmin"
     password: "Iyj*BQ7AL1HPf<7F[SyR7_IE"
+
+# ClickHouse - deploy with chart
+clickhouse:
+  deploy: true
+  auth:
+    username: default
+    password: "clickhouse-langfuse-2026"
