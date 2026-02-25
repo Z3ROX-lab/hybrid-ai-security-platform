@@ -31,6 +31,13 @@ spec:
           value: "aks-proxy"
         - name: TS_KUBE_SECRET
           value: "tailscale-state"
+        - name: TS_SOCKS5_SERVER
+          value: "0.0.0.0:1055"
+        - name: TS_OUTBOUND_HTTP_PROXY_LISTEN
+          value: "0.0.0.0:1055"
+        ports:
+        - containerPort: 1055
+          name: socks5
         securityContext:
           runAsUser: 1000
           runAsGroup: 1000
