@@ -10,16 +10,15 @@ extraEnvVars:
     value: "false"
   - name: ENABLE_SIGNUP
     value: "true"
-  - name: WEBSOCKET_MANAGER
-    value: ""
-  - name: REDIS_URL
-    value: ""
+  - name: ENABLE_WEBSOCKET_SUPPORT
+    value: "false"
 
 persistence:
   enabled: false
 
 websocket:
   enabled: false
+  manager: ""
   redis:
     enabled: false
 
