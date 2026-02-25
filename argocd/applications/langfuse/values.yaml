@@ -7,25 +7,21 @@ langfuse:
   features:
     telemetryEnabled: false
     signUpDisabled: false
+  nextauth:
+    url: "http://localhost:3000"
+    secret:
+      value: "hybrid-ai-platform-langfuse-secret-2026"
 
-# NextAuth configuration
-nextauth:
-  secret:
-    value: "hybrid-ai-platform-langfuse-secret-2026"
-  url: "http://localhost:3000"
-
-# Disable bundled PostgreSQL - using Azure PostgreSQL
+# PostgreSQL - using Azure PostgreSQL
 postgresql:
   deploy: false
-
-# Azure PostgreSQL Flexible Server connection
-externalDatabase:
   host: "psql-ai-platform-91vaoc.postgres.database.azure.com"
   port: 5432
-  name: "langfuse"
-  user: "pgadmin"
-  password: "Iyj*BQ7AL1HPf<7F[SyR7_IE"
-  extraArgs: "sslmode=require"
+  args: "sslmode=require"
+  auth:
+    database: "langfuse"
+    username: "pgadmin"
+    password: "Iyj*BQ7AL1HPf<7F[SyR7_IE"
 
 service:
   type: ClusterIP
