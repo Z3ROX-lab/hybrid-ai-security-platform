@@ -4,13 +4,13 @@
 langfuse:
   salt:
     value: "hybrid-ai-platform-salt-2026"
-  features:
-    telemetryEnabled: false
-    signUpDisabled: false
   nextauth:
     url: "http://localhost:3000"
     secret:
       value: "hybrid-ai-platform-langfuse-secret-2026"
+  features:
+    telemetryEnabled: false
+    signUpDisabled: false
 
 # PostgreSQL - using Azure PostgreSQL
 postgresql:
@@ -22,15 +22,3 @@ postgresql:
     database: "langfuse"
     username: "pgadmin"
     password: "Iyj*BQ7AL1HPf<7F[SyR7_IE"
-
-service:
-  type: ClusterIP
-  port: 3000
-
-resources:
-  requests:
-    memory: "256Mi"
-    cpu: "100m"
-  limits:
-    memory: "512Mi"
-    cpu: "500m"
