@@ -1,6 +1,4 @@
-# Langfuse Helm Values for AKS
-# Chart: langfuse/langfuse v1.5.20
-
+# Langfuse Helm Values for AKS - MINIMAL
 langfuse:
   salt:
     value: "hybrid-ai-platform-salt-2026"
@@ -10,9 +8,8 @@ langfuse:
       value: "hybrid-ai-platform-langfuse-secret-2026"
   features:
     telemetryEnabled: false
-    signUpDisabled: false
 
-# PostgreSQL - using Azure PostgreSQL
+# PostgreSQL - Azure
 postgresql:
   deploy: false
   host: "psql-ai-platform-91vaoc.postgres.database.azure.com"
@@ -23,9 +20,13 @@ postgresql:
     username: "pgadmin"
     password: "Iyj*BQ7AL1HPf<7F[SyR7_IE"
 
-# ClickHouse - deploy with chart
+# ClickHouse - minimal
 clickhouse:
   deploy: true
   auth:
     username: default
     password: "clickhouse-langfuse-2026"
+  replicaCount: 1
+  shards: 1
+  zookeeper:
+    replicaCount: 1
