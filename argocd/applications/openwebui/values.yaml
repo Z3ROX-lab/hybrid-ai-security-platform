@@ -14,9 +14,10 @@ extraEnvVars:
 persistence:
   enabled: false
 
-# Disable redis to save resources
-redis:
-  enabled: false
+# Disable websocket redis to save resources
+websocket:
+  redis:
+    enabled: false
 
 service:
   type: ClusterIP
