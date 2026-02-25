@@ -10,12 +10,16 @@ extraEnvVars:
     value: "false"
   - name: ENABLE_SIGNUP
     value: "true"
+  - name: WEBSOCKET_MANAGER
+    value: ""
+  - name: REDIS_URL
+    value: ""
 
 persistence:
   enabled: false
 
-# Disable websocket redis to save resources
 websocket:
+  enabled: false
   redis:
     enabled: false
 
