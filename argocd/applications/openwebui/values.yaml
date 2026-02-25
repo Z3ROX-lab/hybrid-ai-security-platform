@@ -1,0 +1,39 @@
+# OpenWebUI Helm Values for AKS
+# Chart: open-webui/open-webui v12.3.0
+
+# Ollama runs on K3d - accessible via Tailscale
+ollama:
+  enabled: false
+
+# UPDATE THIS after Tailscale configuration
+ollamaUrls:
+  - "http://ollama-k3d:11434"
+
+extraEnvVars:
+  - name: WEBUI_AUTH
+    value: "false"
+  - name: ENABLE_SIGNUP
+    value: "true"
+  - name: DEFAULT_MODELS
+    value: "mistral:latest"
+
+persistence:
+  enabled: false
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+ingress:
+  enabled: false
+
+pipelines:
+  enabled: false

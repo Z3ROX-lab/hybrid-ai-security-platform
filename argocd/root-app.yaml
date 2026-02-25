@@ -1,26 +1,23 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: open-webui-azure
+  name: aks-root-app
   namespace: argocd
-  labels:
-    app.kubernetes.io/part-of: hybrid-ai-platform
-    environment: azure
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
-  
   source:
     repoURL: https://github.com/Z3ROX-lab/hybrid-ai-security-platform.git
-    targetRevision: main
-    path: kubernetes/azure/apps/open-webui
-  
+    targetRevision: HEAD
+    path: argocd/applications
+    directory:
+      recurse: true
+      include: '*/application.yaml'
   destination:
     server: https://kubernetes.default.svc
-    namespace: ai-apps
-  
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
