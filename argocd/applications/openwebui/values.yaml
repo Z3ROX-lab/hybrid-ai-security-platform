@@ -1,9 +1,10 @@
-# OpenWebUI Helm Values for AKS - MINIMAL
+# OpenWebUI Helm Values for AKS - CONNECTED TO K3D VIA TAILSCALE
 ollama:
   enabled: false
 
+# Ollama via Tailscale (WSL2/K3d)
 ollamaUrls:
-  - "http://ollama-k3d:11434"
+  - "http://100.113.55.54:11434"
 
 extraEnvVars:
   - name: WEBUI_AUTH
@@ -18,7 +19,6 @@ persistence:
 
 websocket:
   enabled: false
-  manager: ""
   redis:
     enabled: false
 
