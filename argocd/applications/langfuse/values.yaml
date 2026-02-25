@@ -1,0 +1,40 @@
+# Langfuse Helm Values for AKS
+# Chart: langfuse/langfuse v1.5.20
+
+langfuse:
+  salt:
+    value: "hybrid-ai-platform-salt-2026"
+  features:
+    telemetryEnabled: false
+    signUpDisabled: false
+
+# NextAuth configuration
+nextauth:
+  secret:
+    value: "hybrid-ai-platform-langfuse-secret-2026"
+  url: "http://localhost:3000"
+
+# Disable bundled PostgreSQL - using Azure PostgreSQL
+postgresql:
+  deploy: false
+
+# Azure PostgreSQL Flexible Server connection
+externalDatabase:
+  host: "psql-ai-platform-91vaoc.postgres.database.azure.com"
+  port: 5432
+  name: "langfuse"
+  user: "pgadmin"
+  password: "Iyj*BQ7AL1HPf<7F[SyR7_IE"
+  extraArgs: "sslmode=require"
+
+service:
+  type: ClusterIP
+  port: 3000
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
