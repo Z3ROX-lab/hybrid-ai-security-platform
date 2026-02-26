@@ -23,27 +23,24 @@ spec:
             secretKeyRef:
               name: tailscale-auth
               key: TS_AUTHKEY
-        - name: TS_USERSPACE
-          value: "true"
         - name: TS_STATE_DIR
           value: "/var/lib/tailscale"
         - name: TS_HOSTNAME
           value: "aks-proxy"
         - name: TS_KUBE_SECRET
           value: "tailscale-state"
-        - name: TS_SOCKS5_SERVER
-          value: "0.0.0.0:1055"
-        - name: TS_OUTBOUND_HTTP_PROXY_LISTEN
-          value: "0.0.0.0:1055"
-        ports:
-        - containerPort: 1055
-          name: socks5
         securityContext:
-          runAsUser: 1000
-          runAsGroup: 1000
+          capabilities:
+            add: ["NET_ADMIN", "NET_RAW"]
         volumeMounts:
         - name: tailscale-state
           mountPath: /var/lib/tailscale
+        - name: dev-tun
+          mountPath: /dev/net/tun
       volumes:
       - name: tailscale-state
         emptyDir: {}
+      - name: dev-tun
+        hostPath:
+          path: /dev/net/tun
+          type: CharDevice
