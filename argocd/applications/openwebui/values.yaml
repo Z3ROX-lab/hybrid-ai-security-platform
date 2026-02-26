@@ -1,4 +1,4 @@
-# OpenWebUI with ngrok tunnel to Ollama
+# OpenWebUI with ngrok tunnel to Ollama (NO REDIS)
 ollama:
   enabled: false
 
@@ -10,8 +10,16 @@ extraEnvVars:
     value: "false"
   - name: ENABLE_SIGNUP
     value: "true"
+  - name: ENABLE_WEBSOCKET_SUPPORT
+    value: "false"
 
 persistence:
+  enabled: false
+
+websocket:
+  enabled: false
+
+redis:
   enabled: false
 
 service:
