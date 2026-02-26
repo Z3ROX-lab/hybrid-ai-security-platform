@@ -1,46 +1,18 @@
-# OpenWebUI with Tailscale sidecar
+# OpenWebUI with ngrok tunnel to Ollama
 ollama:
   enabled: false
 
-# Ollama via localhost (Tailscale sidecar forwards to K3d)
 ollamaUrls:
-  - "http://localhost:11434"
+  - "https://untorpedoed-domitila-diphase.ngrok-free.dev"
 
 extraEnvVars:
   - name: WEBUI_AUTH
     value: "false"
   - name: ENABLE_SIGNUP
     value: "true"
-  - name: ENABLE_WEBSOCKET_SUPPORT
-    value: "false"
 
 persistence:
   enabled: false
-
-websocket:
-  enabled: false
-  redis:
-    enabled: false
-
-# Tailscale sidecar
-sidecars:
-  - name: tailscale
-    image: tailscale/tailscale:latest
-    env:
-      - name: TS_AUTHKEY
-        valueFrom:
-          secretKeyRef:
-            name: tailscale-auth
-            key: TS_AUTHKEY
-      - name: TS_USERSPACE
-        value: "true"
-      - name: TS_OUTBOUND_HTTP_PROXY_LISTEN
-        value: "localhost:11434"
-      - name: TS_HOSTNAME
-        value: "aks-openwebui"
-    securityContext:
-      runAsUser: 1000
-      runAsGroup: 1000
 
 service:
   type: ClusterIP
