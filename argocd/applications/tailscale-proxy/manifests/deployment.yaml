@@ -38,6 +38,14 @@ spec:
           mountPath: /var/lib/tailscale
         - name: dev-tun
           mountPath: /dev/net/tun
+      - name: socat
+        image: alpine/socat:latest
+        args:
+        - "TCP-LISTEN:11434,fork,reuseaddr"
+        - "TCP:100.113.55.54:11434"
+        ports:
+        - containerPort: 11434
+          name: ollama
       volumes:
       - name: tailscale-state
         emptyDir: {}
