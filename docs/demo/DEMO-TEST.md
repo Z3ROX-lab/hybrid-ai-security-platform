@@ -1,6 +1,6 @@
 # Hybrid AI Security Platform — Demo Tests
 
-**Date:** 2026-02-28
+**Date:** 2026-02-28 (updated 2026-03-03)
 **Platform:** K3d (local) + Azure AKS (cloud) — Hybrid Architecture
 **Author:** Z3ROX — Lead SecOps / Cloud Security Architect
 
@@ -21,7 +21,7 @@ User → OpenWebUI → LLM Guard Pipeline → RAG Pipeline → Ollama (Mistral)
 - **Cloud (AKS):** Azure Kubernetes Service connected via Azure Arc
 - **Connectivity:** ngrok tunnel for hybrid access
 - **GitOps:** ArgoCD for deployment management
-- **IAM:** Keycloak OIDC with SSO, RBAC, and group-based model access
+- **IAM:** Keycloak OIDC with SSO, RBAC, group-based model access, and Microsoft Entra ID federation
 
 ---
 
@@ -41,8 +41,9 @@ User → OpenWebUI → LLM Guard Pipeline → RAG Pipeline → Ollama (Mistral)
 | 10 | Azure Defender | ✅ Pass |
 | 11 | Keycloak SSO + RBAC | ✅ Pass |
 | 12 | LLM Guard (Guardrails) | ✅ Pass |
+| 13 | Entra ID Federation (SSO) | ✅ Pass |
 
-**Score: 12/12 tests passed** 🎯
+**Score: 13/13 tests passed** 🎯
 
 ---
 
@@ -432,6 +433,85 @@ This demonstrates **OWASP LLM01 (Prompt Injection)** mitigation — the security
 
 ---
 
+## Test 13 — Entra ID Federation (Enterprise SSO)
+
+**Objective:** Validate Microsoft Entra ID (Azure AD) federation with Keycloak as identity broker, enabling enterprise SSO for OpenWebUI via OIDC.
+
+**Architecture:** User → OpenWebUI → Keycloak (Identity Broker) → Microsoft Entra ID (OIDC) → Azure AD User
+
+### Configuration
+
+**Azure App Registration:**
+- **App Name:** ai-platform-keycloak
+- **Client ID:** 6bc2e502-d12f-4e8e-8a11-847e0861130c
+- **Tenant ID:** 50f175e8-570e-41d1-9759-735e9ad3a14e
+- **Redirect URI:** `https://auth.ai-platform.localhost/realms/ai-platform/broker/microsoft/endpoint`
+
+**Keycloak Identity Provider:**
+- **Provider:** Microsoft (OIDC)
+- **Alias:** microsoft
+- **Display Name:** Microsoft Entra ID
+- **Trust Email:** Enabled
+- **First Login Flow:** first broker login (auto-creates federated users)
+
+### Key Technical Challenges Solved
+
+1. **HTTPS Redirect URI Mismatch:** Keycloak generated `http://` redirect URIs but Azure requires `https://`. Fixed with `--hostname=https://auth.ai-platform.localhost` in Keycloak args.
+
+2. **OpenWebUI SSL Trust:** OpenWebUI could not reach Keycloak's HTTPS endpoint (self-signed cert from cert-manager). Fixed by injecting the platform CA cert into the Python trust store via ConfigMap + `SSL_CERT_FILE` env var.
+
+3. **DNS Resolution in Cluster:** `.localhost` domains resolve to `127.0.0.1` inside pods. Fixed with `hostAliases` pointing `auth.ai-platform.localhost` to Traefik's ClusterIP.
+
+4. **Native vs Guest Users:** Entra ID guest accounts (Gmail `#EXT#`) redirected to `login.live.com` instead of `login.microsoftonline.com`. Fixed by creating a native Entra ID user (`ai-demo@stefilou1971gmail.onmicrosoft.com`).
+
+### SSO Login Flow
+
+Entra ID user creation in Azure Portal — native Member user:
+
+![Azure — Entra ID User Creation](screenshots/entra-id-user-creation.png)
+
+User review — `ai-demo@stefilou1971gmail.onmicrosoft.com`, Member type:
+
+![Azure — Entra ID User Review](screenshots/entra-id-user-review.png)
+
+Microsoft login page — redirected from Keycloak to `login.microsoftonline.com`:
+
+![Microsoft — Sign In Page](screenshots/entra-id-microsoft-login.png)
+
+Microsoft password entry — authenticating with Entra ID credentials:
+
+![Microsoft — Enter Password](screenshots/entra-id-microsoft-password.png)
+
+First-time password change — standard Entra ID policy:
+
+![Microsoft — Update Password](screenshots/entra-id-password-change.png)
+
+Keycloak first broker login — auto-populating user from Entra ID token:
+
+![Keycloak — First Broker Login](screenshots/entra-id-keycloak-broker-login.png)
+
+**Successful SSO** — "Hello, AI Demo" in OpenWebUI, authenticated via Entra ID → Keycloak → OIDC:
+
+![OpenWebUI — Entra ID SSO Success](screenshots/entra-id-openwebui-success.png)
+
+### Identity Brokering Model
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+│  OpenWebUI   │────▶│   Keycloak   │────▶│  Microsoft      │
+│  (OIDC       │     │  (Identity   │     │  Entra ID       │
+│   Client)    │◀────│   Broker)    │◀────│  (OIDC IdP)     │
+└─────────────┘     └──────────────┘     └─────────────────┘
+                           │
+                    Coexisting Users:
+                    ├─ Local: ai-user, z3rox (Keycloak auth)
+                    └─ Federated: ai-demo (Entra ID SSO)
+```
+
+**Result:** Enterprise users authenticate via Microsoft Entra ID while local users keep Keycloak credentials. Keycloak acts as a unified identity broker, enabling **hybrid identity management** — a key enterprise pattern for AI platform access control.
+
+---
+
 ## OWASP LLM Top 10 Coverage
 
 | OWASP LLM | Threat | Mitigation | Tool | Tested |
@@ -460,6 +540,7 @@ This demonstrates **OWASP LLM01 (Prompt Injection)** mitigation — the security
 │  └──────────┘  └────────────┘  └─────────────────┘  │
 │  ┌──────────────────────────────────────────────┐    │
 │  │ Azure Policy (14 policies evaluated)         │    │
+│  │ Entra ID (Identity Federation)               │    │
 │  └──────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────┘
                         │ Azure Arc
@@ -475,6 +556,7 @@ This demonstrates **OWASP LLM01 (Prompt Injection)** mitigation — the security
 │  ┌─── IAM / Zero Trust ────────────────────────┐    │
 │  │ Keycloak (OIDC/SSO) │ RBAC │ Groups          │   │
 │  │ Realm: ai-platform │ Group: ai-security-team  │   │
+│  │ Identity Broker → Microsoft Entra ID (OIDC)   │   │
 │  └───────────────────────────────────────────────┘   │
 │                                                      │
 │  ┌─── Security ─────────────────────────────────┐   │
@@ -536,6 +618,13 @@ This demonstrates **OWASP LLM01 (Prompt Injection)** mitigation — the security
 | 35 | `openwebui-llmguard-private-group.png` | LLM Guard — Private + group READ access |
 | 36 | `llmguard-prompt-injection-blocked.png` | LLM Guard — Prompt injection BLOCKED |
 | 37 | `trivy-cli-scan.png` | Trivy CLI — vulnerability summary |
+| 38 | `entra-id-user-creation.png` | Azure — Entra ID native user creation |
+| 39 | `entra-id-user-review.png` | Azure — User review (Member type) |
+| 40 | `entra-id-microsoft-login.png` | Microsoft — Sign in page from Keycloak |
+| 41 | `entra-id-microsoft-password.png` | Microsoft — Enter password |
+| 42 | `entra-id-password-change.png` | Microsoft — First-time password change |
+| 43 | `entra-id-keycloak-broker-login.png` | Keycloak — First broker login form |
+| 44 | `entra-id-openwebui-success.png` | OpenWebUI — Hello AI Demo (Entra ID SSO) |
 
 ---
 
@@ -553,6 +642,7 @@ This demonstrates **OWASP LLM01 (Prompt Injection)** mitigation — the security
 | Grafana | kube-prometheus-stack |
 | Loki | Single-node, log aggregation |
 | Keycloak | OIDC/SSO, Realm: ai-platform |
+| Entra ID | Microsoft Azure AD, Identity Federation via Keycloak |
 | LLM Guard | Pipeline filter + Guardrails API |
 | Traefik | Ingress controller |
 | ngrok | Hybrid tunnel |
@@ -565,8 +655,9 @@ This demonstrates **OWASP LLM01 (Prompt Injection)** mitigation — the security
 1. **Defense in Depth:** Multiple overlapping security layers — from cloud (Defender, Azure Policy) to cluster (Kyverno, Falco, Trivy) to application (LLM Guard, Keycloak)
 2. **OWASP LLM Top 10 Coverage:** All 10 categories addressed with specific tooling and validated with tests
 3. **Zero Trust IAM:** Keycloak SSO with RBAC — group-based model access control (ai-security-team)
-4. **AI Guardrails:** LLM Guard actively blocking prompt injection attacks before they reach the LLM
-5. **Hybrid Architecture:** Seamless management of on-prem and cloud clusters via Azure Arc
-6. **Full Observability:** Prometheus + Grafana + Loki providing metrics, dashboards, and log aggregation
-7. **GitOps Ready:** ArgoCD-driven deployments for reproducibility and audit trails
-8. **Open Source Stack:** Entire security stack built on OSS tools, demonstrating enterprise-grade security without vendor lock-in
+4. **Enterprise Identity Federation:** Microsoft Entra ID integrated via Keycloak identity brokering — hybrid identity model supporting both local and corporate users
+5. **AI Guardrails:** LLM Guard actively blocking prompt injection attacks before they reach the LLM
+6. **Hybrid Architecture:** Seamless management of on-prem and cloud clusters via Azure Arc
+7. **Full Observability:** Prometheus + Grafana + Loki providing metrics, dashboards, and log aggregation
+8. **GitOps Ready:** ArgoCD-driven deployments for reproducibility and audit trails
+9. **Open Source Stack:** Entire security stack built on OSS tools, demonstrating enterprise-grade security without vendor lock-in
