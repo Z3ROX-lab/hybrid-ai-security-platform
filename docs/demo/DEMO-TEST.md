@@ -1,6 +1,6 @@
 # Hybrid AI Security Platform — Demo Tests
 
-**Date:** 2026-02-28 (updated 2026-03-03)
+**Date:** 2026-02-28 (updated 2026-03-06)
 **Platform:** K3d (local) + Azure AKS (cloud) — Hybrid Architecture
 **Author:** Z3ROX — Lead SecOps / Cloud Security Architect
 
@@ -22,6 +22,7 @@ User → OpenWebUI → LLM Guard Pipeline → RAG Pipeline → Ollama (Mistral)
 - **Connectivity:** ngrok tunnel for hybrid access
 - **GitOps:** ArgoCD for deployment management
 - **IAM:** Keycloak OIDC with SSO, RBAC, group-based model access, and Microsoft Entra ID federation
+- **SIEM:** Microsoft Sentinel on Log Analytics Workspace `law-ai-platform-91vaoc`
 
 ---
 
@@ -42,8 +43,9 @@ User → OpenWebUI → LLM Guard Pipeline → RAG Pipeline → Ollama (Mistral)
 | 11 | Keycloak SSO + RBAC | ✅ Pass |
 | 12 | LLM Guard (Guardrails) | ✅ Pass |
 | 13 | Entra ID Federation (SSO) | ✅ Pass |
+| 14 | Microsoft Sentinel (SIEM) | ✅ Pass |
 
-**Score: 13/13 tests passed** 🎯
+**Score: 14/14 tests passed** 🎯
 
 ---
 
@@ -512,6 +514,125 @@ Keycloak first broker login — auto-populating user from Entra ID token:
 
 ---
 
+## Test 14 — Microsoft Sentinel (Cloud SIEM)
+
+**Objective:** Validate Microsoft Sentinel SIEM integration with Azure Activity logs, Microsoft Entra ID audit logs, and Defender for Cloud alerts for centralized cloud security monitoring.
+
+**Architecture:** Azure Subscription → Diagnostic Settings / Azure Policy → Log Analytics Workspace (`law-ai-platform-91vaoc`) → Microsoft Sentinel
+
+### Configuration
+
+| Component | Details | Status |
+|---|---|---|
+| Sentinel Workspace | `law-ai-platform-91vaoc` (francecentral) | ✅ Active |
+| Resource Group | `rg-ai-platform-dev` | ✅ |
+| Free Trial | 10 GB/day until 06/04/2026 | ✅ Active |
+| Content Hub — Azure Activity | Solution installed | ✅ |
+| Content Hub — Microsoft Entra ID | Solution installed | ✅ |
+| Content Hub — Defender for Cloud | Solution installed | ✅ |
+
+### Data Connectors
+
+| Connector | Method | Status |
+|---|---|---|
+| Azure Activity | Azure Policy assignment — `Azure subscription 1` | ✅ Connected |
+| Microsoft Entra ID | Diagnostic Settings — Audit Logs enabled | ✅ Connected |
+| Tenant-based Defender for Cloud | Auto-connected via Microsoft Defender XDR | ✅ Connected |
+
+### Content Hub — Solutions Selection
+
+3 solutions selected for installation (Azure Activity, Microsoft Entra ID, Defender for Cloud):
+
+![Sentinel — Content Hub Solutions Selection](screenshots/sentinel-content-hub-select.png)
+
+### Content Hub — Solutions Installed
+
+3 solutions confirmed installed — Status: Installed filter active:
+
+![Sentinel — Content Hub Solutions Installed](screenshots/sentinel-content-hub-installed.png)
+
+### Data Connectors Overview
+
+11 connectors available, 8 connected:
+
+![Sentinel — Data Connectors Overview](screenshots/sentinel-data-connectors.png)
+
+### Azure Activity — Policy Assignment
+
+Azure Policy assigned to stream Activity logs to `law-ai-platform-91vaoc`:
+
+![Sentinel — Azure Activity Policy Assignment](screenshots/sentinel-azure-activity-policy.png)
+
+**Policy configuration:**
+- **Scope:** Azure subscription 1
+- **Policy:** `Configure Azure Activity logs to stream to specified Log Analytics workspace`
+- **Workspace:** `/subscriptions/ba0b95a5-9b7c-42f1-9be5-60693af5e24f/resourcegroups/rg-ai-platform-dev/providers/microsoft.operationalinsights/workspaces/law-ai-platform-91vaoc`
+- **Remediation task:** Yes (applies to existing resources)
+- **Managed Identity:** System assigned
+
+### Azure Activity — Connector Status
+
+Last data received: **06/03/2026, 16:33** — 10 AzureActivity events ingested:
+
+![Sentinel — Azure Activity Connector](screenshots/sentinel-azure-activity-connector.png)
+
+> **Note:** Status shows "Not connected" in UI — known behavior of the new diagnostics pipeline. Data is actively flowing as evidenced by the spike in the graph and Last data received timestamp.
+
+### Microsoft Entra ID — Connector Status
+
+Last data received: **06/03/2026, 16:28** — Audit Logs actively ingesting:
+
+![Sentinel — Entra ID Connector](screenshots/sentinel-entra-id-connector.png)
+
+### Defender Portal — Microsoft Sentinel
+
+Sentinel integrated in Microsoft Defender portal (`security.microsoft.com`) — unified SecOps experience with SOC optimization (13 recommendations active):
+
+![Sentinel — Defender Portal Home](screenshots/sentinel-defender-portal-home.png)
+
+### Workbooks — Available Templates
+
+5 workbook templates available: Azure Activity, Azure Service Health, Conditional Access SISM, Entra ID Audit logs, Entra ID Sign-in logs:
+
+![Sentinel — Workbooks Templates](screenshots/sentinel-workbooks-templates.png)
+
+### Azure Activity Workbook
+
+Real data: 9 activities, RG-AI-PLATFORM-DEV with 2 activities, 8 creations, 8 updates (Sentinel setup operations):
+
+![Sentinel — Azure Activity Workbook](screenshots/sentinel-azure-activity-workbook.png)
+
+Caller activities — 3 service principals active, 0 Warnings, 0 Errors (clean infrastructure):
+
+![Sentinel — Azure Activity Workbook Detail](screenshots/sentinel-azure-activity-workbook-2.png)
+
+### Entra ID Audit Logs Workbook
+
+User activities: **"Add service principal"** × 5 — ApplicationManagement category (App Registration `ai-platform-keycloak` federation events):
+
+![Sentinel — Entra ID Audit Workbook](screenshots/sentinel-entra-audit-workbook.png)
+
+Caller detail — unknown service account, 5 operations captured:
+
+![Sentinel — Entra ID Audit Workbook Detail](screenshots/sentinel-entra-audit-workbook-detail.png)
+
+Result status — 5 failures captured (Phase 9 troubleshooting attempts — redirect URI debug):
+
+![Sentinel — Entra ID Audit Result Status](screenshots/sentinel-entra-audit-workbook-result.png)
+
+### OWASP LLM Coverage via Sentinel
+
+| OWASP LLM Risk | Sentinel Coverage |
+|---|---|
+| LLM01 — Prompt Injection | Audit trail of API calls via Azure Activity logs |
+| LLM06 — Sensitive Info Disclosure | Entra ID Audit Logs — access & identity monitoring |
+| LLM08 — Excessive Agency | Defender for Cloud alerts on anomalous resource usage |
+| LLM09 — Overreliance | Incident detection, alerting, and investigation workflows |
+
+**Result:** Microsoft Sentinel provides centralized SIEM visibility across the entire AI platform — from cloud infrastructure (Azure Activity) to identity events (Entra ID) to security alerts (Defender for Cloud). This closes the observability gap between the on-prem K3d stack (Grafana/Loki/Falco) and the Azure cloud layer, delivering a **full-stack security monitoring** posture.
+
+---
+
 ## OWASP LLM Top 10 Coverage
 
 | OWASP LLM | Threat | Mitigation | Tool | Tested |
@@ -521,10 +642,10 @@ Keycloak first broker login — auto-populating user from Entra ID token:
 | LLM03 | Training Data Poisoning | Image scanning for known CVEs | Trivy | ✅ Scanning |
 | LLM04 | Model Denial of Service | Resource limits, Kyverno policies | Kyverno | ✅ Policies |
 | LLM05 | Supply Chain Vulnerabilities | Container image vulnerability scanning | Trivy | ✅ 8C/73H/206M |
-| LLM06 | Sensitive Information Disclosure | PII detection in LLM Guard | LLM Guard | ✅ Active |
+| LLM06 | Sensitive Information Disclosure | PII detection in LLM Guard + Sentinel audit | LLM Guard, Sentinel | ✅ Active |
 | LLM07 | Insecure Plugin Design | Network policies, RBAC | Kyverno, K8s | ✅ Policies |
-| LLM08 | Excessive Agency | RBAC, least privilege, group-based access | Kyverno, Keycloak | ✅ Groups |
-| LLM09 | Overreliance | Audit logging, observability | Grafana, Loki | ✅ Dashboards |
+| LLM08 | Excessive Agency | RBAC, least privilege, group-based access + Sentinel alerts | Kyverno, Keycloak, Sentinel | ✅ Groups |
+| LLM09 | Overreliance | Audit logging, observability, SIEM | Grafana, Loki, Sentinel | ✅ Dashboards |
 | LLM10 | Model Theft | Runtime detection of model file access | Falco | ✅ Alerts |
 
 ---
@@ -532,47 +653,51 @@ Keycloak first broker login — auto-populating user from Entra ID token:
 ## Security Stack Summary
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                  AZURE CLOUD                         │
-│  ┌──────────┐  ┌────────────┐  ┌─────────────────┐  │
-│  │   AKS    │  │ Azure Arc  │  │ Defender for    │  │
-│  │ Cluster  │  │ (Hybrid)   │  │ Cloud           │  │
-│  └──────────┘  └────────────┘  └─────────────────┘  │
-│  ┌──────────────────────────────────────────────┐    │
-│  │ Azure Policy (14 policies evaluated)         │    │
-│  │ Entra ID (Identity Federation)               │    │
-│  └──────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      AZURE CLOUD                             │
+│  ┌──────────┐  ┌────────────┐  ┌─────────────────────────┐  │
+│  │   AKS    │  │ Azure Arc  │  │ Defender for Cloud      │  │
+│  │ Cluster  │  │ (Hybrid)   │  │ (Security Posture)      │  │
+│  └──────────┘  └────────────┘  └─────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │ Azure Policy (14 policies evaluated)                 │    │
+│  │ Entra ID (Identity Federation via Keycloak)          │    │
+│  │ Microsoft Sentinel (SIEM — law-ai-platform-91vaoc)   │    │
+│  │   ├─ Azure Activity Logs (Policy-based streaming)    │    │
+│  │   ├─ Entra ID Audit Logs (Diagnostic Settings)       │    │
+│  │   └─ Defender for Cloud Alerts (XDR integration)     │    │
+│  └──────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
                         │ Azure Arc
                         ▼
-┌─────────────────────────────────────────────────────┐
-│              K3D LOCAL CLUSTER (3 nodes)             │
-│                                                      │
-│  ┌─── AI Inference ─────────────────────────────┐   │
-│  │ OpenWebUI → LLM Guard → RAG → Ollama(Mistral)│   │
-│  │ Qdrant (Vector DB) │ Guardrails API           │   │
-│  └───────────────────────────────────────────────┘   │
-│                                                      │
-│  ┌─── IAM / Zero Trust ────────────────────────┐    │
-│  │ Keycloak (OIDC/SSO) │ RBAC │ Groups          │   │
-│  │ Realm: ai-platform │ Group: ai-security-team  │   │
-│  │ Identity Broker → Microsoft Entra ID (OIDC)   │   │
-│  └───────────────────────────────────────────────┘   │
-│                                                      │
-│  ┌─── Security ─────────────────────────────────┐   │
-│  │ Falco (DaemonSet) │ Kyverno │ Trivy Operator │   │
-│  │ OWASP-LLM10 rules │ 6 policies │ CVE scans   │   │
-│  └───────────────────────────────────────────────┘   │
-│                                                      │
-│  ┌─── Observability ────────────────────────────┐   │
-│  │ Prometheus │ Grafana │ Loki │ Promtail        │   │
-│  │ Alertmanager │ Node Exporter │ kube-state     │   │
-│  └───────────────────────────────────────────────┘   │
-│                                                      │
-│  ┌─── Networking ───────────────────────────────┐   │
-│  │ Traefik (Ingress) │ ngrok (Hybrid Tunnel)     │   │
-│  └───────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│              K3D LOCAL CLUSTER (3 nodes)                     │
+│                                                              │
+│  ┌─── AI Inference ─────────────────────────────────────┐   │
+│  │ OpenWebUI → LLM Guard → RAG → Ollama (Mistral)       │   │
+│  │ Qdrant (Vector DB) │ Guardrails API                   │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌─── IAM / Zero Trust ─────────────────────────────────┐   │
+│  │ Keycloak (OIDC/SSO) │ RBAC │ Groups                  │   │
+│  │ Realm: ai-platform │ Group: ai-security-team          │   │
+│  │ Identity Broker → Microsoft Entra ID (OIDC)           │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌─── Security ─────────────────────────────────────────┐   │
+│  │ Falco (DaemonSet) │ Kyverno │ Trivy Operator          │   │
+│  │ OWASP-LLM10 rules │ 6 policies │ CVE scans            │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌─── Observability ────────────────────────────────────┐   │
+│  │ Prometheus │ Grafana │ Loki │ Promtail                │   │
+│  │ Alertmanager │ Node Exporter │ kube-state             │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌─── Networking ───────────────────────────────────────┐   │
+│  │ Traefik (Ingress) │ ngrok (Hybrid Tunnel)             │   │
+│  └───────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -625,6 +750,19 @@ Keycloak first broker login — auto-populating user from Entra ID token:
 | 42 | `entra-id-password-change.png` | Microsoft — First-time password change |
 | 43 | `entra-id-keycloak-broker-login.png` | Keycloak — First broker login form |
 | 44 | `entra-id-openwebui-success.png` | OpenWebUI — Hello AI Demo (Entra ID SSO) |
+| 45 | `sentinel-content-hub-select.png` | Sentinel — Content Hub 3 solutions installed (filtered view) |
+| 46 | `sentinel-content-hub-installed.png` | Sentinel — Content Hub full list with 3 Installed |
+| 47 | `sentinel-data-connectors.png` | Sentinel — Data Connectors overview (8 connected) |
+| 47 | `sentinel-azure-activity-policy.png` | Sentinel — Azure Activity policy assignment |
+| 48 | `sentinel-azure-activity-connector.png` | Sentinel — Azure Activity connector, last data 06/03/26 16:33 |
+| 49 | `sentinel-entra-id-connector.png` | Sentinel — Entra ID connector, last data 06/03/26 16:28 |
+| 50 | `sentinel-defender-portal-home.png` | Sentinel — Defender portal home, SOC optimization 13 active |
+| 51 | `sentinel-workbooks-templates.png` | Sentinel — 5 workbook templates available |
+| 52 | `sentinel-azure-activity-workbook.png` | Sentinel — Azure Activity workbook, 9 activities |
+| 53 | `sentinel-azure-activity-workbook-2.png` | Sentinel — Caller activities + log levels |
+| 54 | `sentinel-entra-audit-workbook.png` | Sentinel — Entra ID Audit workbook, Add service principal ×5 |
+| 55 | `sentinel-entra-audit-workbook-detail.png` | Sentinel — Entra ID caller detail |
+| 56 | `sentinel-entra-audit-workbook-result.png` | Sentinel — Result status failures (Phase 9 debug history) |
 
 ---
 
@@ -644,6 +782,7 @@ Keycloak first broker login — auto-populating user from Entra ID token:
 | Keycloak | OIDC/SSO, Realm: ai-platform |
 | Entra ID | Microsoft Azure AD, Identity Federation via Keycloak |
 | LLM Guard | Pipeline filter + Guardrails API |
+| Microsoft Sentinel | SIEM on law-ai-platform-91vaoc (francecentral), free trial 10GB/day |
 | Traefik | Ingress controller |
 | ngrok | Hybrid tunnel |
 | ArgoCD | GitOps deployment |
@@ -652,12 +791,13 @@ Keycloak first broker login — auto-populating user from Entra ID token:
 
 ## Key Takeaways
 
-1. **Defense in Depth:** Multiple overlapping security layers — from cloud (Defender, Azure Policy) to cluster (Kyverno, Falco, Trivy) to application (LLM Guard, Keycloak)
+1. **Defense in Depth:** Multiple overlapping security layers — from cloud (Defender, Azure Policy, Sentinel) to cluster (Kyverno, Falco, Trivy) to application (LLM Guard, Keycloak)
 2. **OWASP LLM Top 10 Coverage:** All 10 categories addressed with specific tooling and validated with tests
 3. **Zero Trust IAM:** Keycloak SSO with RBAC — group-based model access control (ai-security-team)
 4. **Enterprise Identity Federation:** Microsoft Entra ID integrated via Keycloak identity brokering — hybrid identity model supporting both local and corporate users
 5. **AI Guardrails:** LLM Guard actively blocking prompt injection attacks before they reach the LLM
 6. **Hybrid Architecture:** Seamless management of on-prem and cloud clusters via Azure Arc
-7. **Full Observability:** Prometheus + Grafana + Loki providing metrics, dashboards, and log aggregation
-8. **GitOps Ready:** ArgoCD-driven deployments for reproducibility and audit trails
-9. **Open Source Stack:** Entire security stack built on OSS tools, demonstrating enterprise-grade security without vendor lock-in
+7. **Full Observability:** Prometheus + Grafana + Loki (on-prem) + Microsoft Sentinel (cloud) providing end-to-end visibility
+8. **Cloud SIEM:** Microsoft Sentinel aggregating Azure Activity, Entra ID audit, and Defender alerts in a single pane of glass
+9. **GitOps Ready:** ArgoCD-driven deployments for reproducibility and audit trails
+10. **Open Source Stack:** Entire security stack built on OSS tools, demonstrating enterprise-grade security without vendor lock-in
